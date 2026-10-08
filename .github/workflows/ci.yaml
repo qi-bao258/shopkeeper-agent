@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check .
+
+      - name: Run tests with coverage
+        # 单元测试全部使用 mock，不依赖 MySQL/Qdrant/ES 等外部服务。
+        # --cov-fail-under 让覆盖率成为门禁而非仅供围观：低于门槛直接失败。
+        # 阈值取 60%：当前实测约 64%（检索/节点层多为外部调用，需集成环境才能覆盖），
+        # 门槛设在实测值略下方，既能拦住覆盖率断崖式下跌，又不会因正常波动误报失败。
+        # 随节点层测试补齐再逐步上调。
+        run: |
+          uv run pytest \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=60
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  eval-gate:
+    name: Eval Gate
+    runs-on: ubuntu-latest
+    # 评测集是问数质量的回归防线，与单测分离成独立 job：
+    # 单测挂说明代码坏了，评测挂说明效果退化了，两类问题需要分开定位。
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run offline eval
+        # 评测脚本内部以非零退出码表示未达通过率阈值，
+        # 因此这一步天然可作为 CI 门禁，无需额外解析报告。
+        run: uv run python -m eval.run_eval
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        # 只验证镜像可构建，不推送，用于拦截 Dockerfile 破坏性变更
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

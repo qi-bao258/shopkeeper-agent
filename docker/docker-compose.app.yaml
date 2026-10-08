@@ -1,0 +1,53 @@
+# 应用编排（后端 + 前端）
+#
+# 与 docker-compose.yaml 分开管理：
+#   docker-compose.yaml   基础设施（MySQL/ES/Qdrant/Embedding）—— 变更少，数据卷在此
+#   docker-compose.app.yaml  应用（backend/frontend）—— 改代码后重建这一个
+#
+# 两者共用同一网络（shopkeeper-net），因此内部可直接用服务名互访。
+#
+# 用法：
+#   docker compose -f docker-compose.yaml -f docker-compose.app.yaml up -d
+#
+# 为什么把应用也容器化：
+#   本机沙箱会在终端会话结束时回收其派生的进程树，导致在宿主机直接
+#   `uv run fastapi dev` 起的后端无法长期存活（表现为前端报 Failed to fetch）。
+#   放进容器后由 Docker daemon 托管，不受会话生命周期影响。
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: shopkeeper-agent-backend:local
+    container_name: shopkeeper-app
+    restart: unless-stopped
+    environment:
+      # LLM Key 从宿主机 .env 注入，容器内不落盘
+      LLM_API_KEY: ${LLM_API_KEY:?请在项目根 .env 设置 LLM_API_KEY}
+    volumes:
+      # 用容器专用配置覆盖（host 改为服务名）
+      - ./app_config.container.yaml:/app/conf/app_config.yaml:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - shopkeeper-net
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: shopkeeper-agent-frontend:local
+    container_name: shopkeeper-frontend
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "5173:80"
+    networks:
+      - shopkeeper-net
+
+networks:
+  shopkeeper-net:
+    name: shopkeeper-net
+    external: false

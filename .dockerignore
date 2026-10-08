@@ -1,0 +1,45 @@
+# 构建上下文排除清单
+#
+# 不加这个文件时，构建上下文会达到 1.75GB（把 .venv / node_modules / 日志
+# 全传给 daemon），既慢又容易触发磁盘告警。这些内容在镜像内都会重新生成，
+# 必须排除。
+
+# Python 虚拟环境与缓存
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 前端依赖与产物
+frontend/node_modules/
+**/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# 版本控制与 IDE
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# 运行时数据与日志
+logs/
+*.log
+eval/results/
+
+# 本机专有配置（容器内用 docker/app_config.container.yaml 覆盖）
+.env
+.env.local
+
+# 文档与素材
+*.md
+docs/
+images/
+
+# 其它
+.DS_Store
+Thumbs.db

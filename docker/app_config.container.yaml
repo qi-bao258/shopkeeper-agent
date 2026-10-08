@@ -1,0 +1,52 @@
+# 容器内运行用的配置覆盖。
+#
+# 与 conf/app_config.yaml 的唯一区别：所有 host 从 localhost 改为 compose 服务名。
+# 在容器内 localhost 指向容器自己，必须用服务名才能互访。
+#
+# 用法（compose 里通过 conf 目录挂载替换）：
+#   保持文件名 app_config.yaml，挂到容器 /app/conf/app_config.yaml
+
+logging:
+  file:
+    enable: true
+    level: INFO
+    path: logs
+    rotation: "10 MB"
+    retention: "7 days"
+  console:
+    enable: true
+    level: INFO
+
+db_meta:
+  host: mysql
+  port: 3306
+  user: didilili
+  password: dili123
+  database: meta
+
+db_dw:
+  host: mysql
+  port: 3306
+  user: didilili
+  password: dili123
+  database: dw
+
+qdrant:
+  host: qdrant
+  port: 6333
+  embedding_size: 1024
+
+embedding:
+  host: embedding
+  port: 80
+  model: BAAI/bge-large-zh-v1.5
+
+es:
+  host: elasticsearch
+  port: 9200
+  index_name: data_agent
+
+llm:
+  model_name: "deepseek-ai/DeepSeek-V4-Flash"
+  api_key: ${oc.env:LLM_API_KEY}
+  base_url: https://api.siliconflow.cn/v1

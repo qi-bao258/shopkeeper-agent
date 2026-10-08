@@ -1,0 +1,81 @@
+# 问数评测集（Golden Set）
+#
+# 每条用例包含：自然语言问题、期望命中的表、期望命中的字段、期望命中的指标。
+# 评测脚本按"召回命中率"和"SQL 可执行率"两个维度打分，不要求 SQL 文本完全一致
+# （同一语义有多种正确写法），而是校验业务要素是否被正确识别。
+#
+# 扩展方式：按同样结构追加用例即可，建议覆盖单表聚合、多表 Join、时间过滤、
+# 枚举值过滤、TopN 排序、同环比等典型问数场景。
+
+- id: q001
+  question: 统计华北地区的销售总额
+  expect_tables:
+    - fact_order
+    - dim_region
+  expect_columns:
+    - region_name
+    - order_amount
+  expect_metrics:
+    - 销售总额
+  difficulty: easy
+  category: 单指标聚合
+
+- id: q002
+  question: 统计 2025 年第一季度各大区的 GMV，并按 GMV 从高到低排序
+  expect_tables:
+    - fact_order
+    - dim_region
+  expect_columns:
+    - region_name
+    - order_amount
+    - order_date
+  expect_metrics:
+    - GMV
+  difficulty: medium
+  category: 时间过滤 + 分组排序
+
+- id: q003
+  question: 统计 2025 年 3 月各商品品类的销量和销售额
+  expect_tables:
+    - fact_order
+    - dim_product
+  expect_columns:
+    - category_name
+    - order_quantity
+    - order_amount
+    - order_date
+  expect_metrics:
+    - 销量
+    - 销售额
+  difficulty: medium
+  category: 多指标 + 维度分组
+
+- id: q004
+  question: 查询华东地区 2025 年第一季度销售额最高的前 5 个商品
+  expect_tables:
+    - fact_order
+    - dim_region
+    - dim_product
+  expect_columns:
+    - region_name
+    - product_name
+    - order_amount
+  expect_metrics:
+    - 销售额
+  difficulty: hard
+  category: 多表 Join + TopN
+
+- id: q005
+  question: 按会员等级统计 2025 年第一季度的订单数和销售额
+  expect_tables:
+    - fact_order
+    - dim_member
+  expect_columns:
+    - member_level
+    - order_id
+    - order_amount
+  expect_metrics:
+    - 订单数
+    - 销售额
+  difficulty: medium
+  category: 维度分组 + 多指标

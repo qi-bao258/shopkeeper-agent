@@ -1,0 +1,22 @@
+# 基础设施接入共享网络
+#
+# 原 docker-compose.yaml 的五个服务未声明 networks，默认落在各自的项目网络里，
+# 应用容器（另一个 compose 项目）访问不到。
+# 本 override 把它们统一挂到 shopkeeper-net。
+
+services:
+  mysql:
+    networks: [shopkeeper-net]
+  elasticsearch:
+    networks: [shopkeeper-net]
+  kibana:
+    networks: [shopkeeper-net]
+  qdrant:
+    networks: [shopkeeper-net]
+  embedding:
+    networks: [shopkeeper-net]
+
+networks:
+  shopkeeper-net:
+    name: shopkeeper-net
+    external: false
